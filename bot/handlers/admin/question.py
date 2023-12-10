@@ -9,8 +9,15 @@ from bot.db.decorators import session_decorator
 from bot.db.models import Discipline, Question
 from bot.enums import DisciplineActionEnum, QuestionActionEnum
 from bot.filters.admin import IsSuperAdmin
-from bot.kb.admin_kb import discipline_callback, get_question_kb, question_callback, question_edit_callback, \
-    skip_photo_kb, create_question_kb, edit_question_kb
+from bot.kb.admin_kb import (
+    discipline_callback,
+    get_question_kb,
+    question_callback,
+    question_edit_callback,
+    skip_photo_kb,
+    create_question_kb,
+    edit_question_kb,
+)
 from bot.states import QuestionState
 
 
@@ -18,24 +25,14 @@ class InvalidInput(Exception):
     pass
 
 
-def validate_price(text):
-    try:
-        price = Decimal(text.replace(',', '.'))
-    except DecimalException:
-        raise InvalidInput("Введіть валідне цифрове значення")
-
-    if price < 0:
-        raise InvalidInput("Введіть позитивне значення")
-
-    return price
-
-
 @dp.callback_query_handler(
     IsSuperAdmin(), discipline_callback.filter(action=DisciplineActionEnum.detail.value)
 )
 @session_decorator()
 async def question_list(cq: types.CallbackQuery, callback_data: dict) -> None:
-    questions = await Question.get_list(Question.discipline_id == int(callback_data["discipline_id"]))
+    questions = await Question.get_list(
+        Question.discipline_id == int(callback_data["discipline_id"])
+    )
     discipline = await Discipline.get(int(callback_data["discipline_id"]))
     await cq.message.answer(f"Питання дисципліни «{discipline.name}»")
     for question in questions:
@@ -45,12 +42,12 @@ async def question_list(cq: types.CallbackQuery, callback_data: dict) -> None:
                 media.attach_photo(photo_id)
 
             await cq.message.answer_media_group(media=media)
-        await cq.message.answer(question.text,
-                                reply_markup=get_question_kb(question.id))
+        await cq.message.answer(
+            question.text, reply_markup=get_question_kb(question.id)
+        )
 
     kb = create_question_kb(int(callback_data["discipline_id"]))
-    await cq.message.answer("---------------------------------",
-                            reply_markup=kb)
+    await cq.message.answer("---------------------------------", reply_markup=kb)
     await cq.answer()
 
 
@@ -69,11 +66,17 @@ async def delete_question(cq: types.CallbackQuery, callback_data: dict) -> None:
     IsSuperAdmin(), question_callback.filter(action=QuestionActionEnum.create.value)
 )
 @session_decorator()
-async def create_question(cq: types.CallbackQuery, state: FSMContext, callback_data: dict) -> None:
+async def create_question(
+    cq: types.CallbackQuery, state: FSMContext, callback_data: dict
+) -> None:
     async with state.proxy() as data:
         data["discipline_id"] = int(callback_data["discipline_id"])
     await QuestionState.photo.set()
-    await cq.message.answer("Відправте фото до питання або пропустіть даний крок натиснувщи на кнопку нижче ", reply_markup=skip_photo_kb())
+    await cq.message.answer(
+        "Відправте фото до питання або пропустіть даний крок натиснувщи на кнопку нижче ",
+        reply_markup=skip_photo_kb(),
+    )
+    await cq.answer()
 
 
 @dp.message_handler(state=QuestionState.photo, regexp="Пропустити фото")
@@ -104,17 +107,29 @@ async def load_text(msg: types.Message, state: FSMContext):
     data = await state.get_data()
     if await Question.exists(None, discipline_id=data["discipline_id"], text=msg.text):
         return await msg.answer("Таке питання вже існує")
-    await Question.create(**data, text=msg.text)
+    async with state.proxy() as data:
+        data["text"] = msg.text
+    await QuestionState.materials.set()
+    await msg.reply(f"Додайте матеріали\n")
+
+
+@dp.message_handler(state=QuestionState.materials)
+@session_decorator()
+async def load_materials(msg: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await Question.create(**data, material=msg.text)
+
     await state.finish()
-    await msg.answer(f"Питання створено ✅\n")
+    await msg.reply(f"Питання створено ✅\n")
 
 
 @dp.callback_query_handler(
-    IsSuperAdmin(), question_edit_callback.filter(action=QuestionActionEnum.detail.value)
+    IsSuperAdmin(),
+    question_edit_callback.filter(action=QuestionActionEnum.detail.value),
 )
 @session_decorator()
 async def question_details(
-        cq: types.CallbackQuery, callback_data: dict, state: FSMContext
+    cq: types.CallbackQuery, callback_data: dict, state: FSMContext
 ) -> None:
     question_id = callback_data.get("question_id")
     async with state.proxy() as data:
@@ -123,16 +138,19 @@ async def question_details(
     question = await Question.get(int(data["question_id"]))
     await cq.message.answer(
         f"Оберіть дію для питання: \n «{question.text}»",
-        reply_markup = edit_question_kb(int(callback_data["question_id"]))
+        reply_markup=edit_question_kb(int(callback_data["question_id"])),
     )
     await cq.answer()
 
 
 @dp.callback_query_handler(
-    IsSuperAdmin(), question_edit_callback.filter(action=QuestionActionEnum.edit_text.value)
+    IsSuperAdmin(),
+    question_edit_callback.filter(action=QuestionActionEnum.edit_text.value),
 )
 @session_decorator()
-async def question_edit_text(cq: types.CallbackQuery, callback_data: dict, state: FSMContext) -> None:
+async def question_edit_text(
+    cq: types.CallbackQuery, callback_data: dict, state: FSMContext
+) -> None:
     await QuestionState.edit_text.set()
 
     question_id = callback_data.get("question_id")
@@ -158,17 +176,20 @@ async def question_edit_text(msg: types.Message, state: FSMContext):
 
 
 @dp.callback_query_handler(
-    IsSuperAdmin(), question_edit_callback.filter(action=QuestionActionEnum.edit_photo.value)
+    IsSuperAdmin(),
+    question_edit_callback.filter(action=QuestionActionEnum.edit_photo.value),
 )
 async def question_edit_photo(
-        cq: types.CallbackQuery, callback_data: dict, state: FSMContext
+    cq: types.CallbackQuery, callback_data: dict, state: FSMContext
 ) -> None:
     await QuestionState.edit_photo.set()
 
     async with state.proxy() as data:
         data["question_id"] = callback_data.get("question_id")
 
-    await cq.message.answer("Відправте фото \nДля відміни - /cancel", reply_markup=skip_photo_kb())
+    await cq.message.answer(
+        "Відправте фото \nДля відміни - /cancel", reply_markup=skip_photo_kb()
+    )
 
 
 @dp.message_handler(content_types=["photo"], state=QuestionState.edit_photo)

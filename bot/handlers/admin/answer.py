@@ -6,16 +6,25 @@ from bot.db.decorators import session_decorator
 from bot.db.models import Answer, Question
 from bot.enums import AnswerActionEnum
 from bot.filters.admin import IsSuperAdmin
-from bot.kb.admin_kb import question_callback, skip_photo_kb, answer_callback, get_question_kb, get_answer_kb, \
-    answer_edit_callback
+from bot.kb.admin_kb import (
+    question_callback,
+    skip_photo_kb,
+    answer_callback,
+    get_question_kb,
+    get_answer_kb,
+    answer_edit_callback,
+)
 from bot.states import AnswerState
 
 
 @dp.callback_query_handler(
-    IsSuperAdmin(), answer_callback.filter(action=AnswerActionEnum.create_right_answer.value)
+    IsSuperAdmin(),
+    answer_callback.filter(action=AnswerActionEnum.create_right_answer.value),
 )
 @session_decorator()
-async def create_right_answer(cq: types.CallbackQuery, state: FSMContext, callback_data: dict) -> None:
+async def create_right_answer(
+    cq: types.CallbackQuery, state: FSMContext, callback_data: dict
+) -> None:
     async with state.proxy() as data:
         data["question_id"] = int(callback_data["question_id"])
     await AnswerState.right_answer.set()
@@ -37,10 +46,13 @@ async def right_answer(msg: types.Message, state: FSMContext):
 
 
 @dp.callback_query_handler(
-    IsSuperAdmin(), answer_callback.filter(action=AnswerActionEnum.create_wrong_answer.value)
+    IsSuperAdmin(),
+    answer_callback.filter(action=AnswerActionEnum.create_wrong_answer.value),
 )
 @session_decorator()
-async def create_wrong_answer(cq: types.CallbackQuery, state: FSMContext, callback_data: dict) -> None:
+async def create_wrong_answer(
+    cq: types.CallbackQuery, state: FSMContext, callback_data: dict
+) -> None:
     async with state.proxy() as data:
         data["question_id"] = int(callback_data["question_id"])
     await AnswerState.wrong_answer.set()
@@ -66,16 +78,22 @@ async def wrong_answer(msg: types.Message, state: FSMContext):
 )
 @session_decorator()
 async def answer_list(cq: types.CallbackQuery, callback_data: dict) -> None:
-    answers = await Answer.get_list(Answer.question_id == int(callback_data["question_id"]))
+    answers = await Answer.get_list(
+        Answer.question_id == int(callback_data["question_id"])
+    )
     questions = await Question.get(int(callback_data["question_id"]))
     await cq.message.answer(f"Відповіді до питання «{questions.text}»")
     for answer in answers:
         if answer.is_correct:
-            await cq.message.answer(f"Правильна відповідь: {answer.text}",
-                                reply_markup = get_answer_kb(answer.id))
+            await cq.message.answer(
+                f"Правильна відповідь: {answer.text}",
+                reply_markup=get_answer_kb(answer.id),
+            )
         else:
-            await cq.message.answer(f"Неправильна відповідь: {answer.text}",
-                                    reply_markup = get_answer_kb(answer.id))
+            await cq.message.answer(
+                f"Неправильна відповідь: {answer.text}",
+                reply_markup=get_answer_kb(answer.id),
+            )
     await cq.answer()
 
 
@@ -94,7 +112,9 @@ async def delete_answer(cq: types.CallbackQuery, callback_data: dict) -> None:
     IsSuperAdmin(), answer_edit_callback.filter(action=AnswerActionEnum.edit_text.value)
 )
 @session_decorator()
-async def answer_edit_text(cq: types.CallbackQuery, callback_data: dict, state: FSMContext) -> None:
+async def answer_edit_text(
+    cq: types.CallbackQuery, callback_data: dict, state: FSMContext
+) -> None:
     await AnswerState.edit_text.set()
 
     answer_id = callback_data.get("answer_id")

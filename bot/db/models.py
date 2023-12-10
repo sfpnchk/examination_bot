@@ -22,10 +22,12 @@ class Discipline(Base, CreatedMixin, UpdatedMixin):
 class Question(Base, CreatedMixin, UpdatedMixin):
     __tablename__ = "question"
 
-    discipline_id = Column(Integer, ForeignKey("discipline.id", ondelete="CASCADE"), nullable=False)
+    discipline_id = Column(
+        Integer, ForeignKey("discipline.id", ondelete="CASCADE"), nullable=False
+    )
     photo = Column(ARRAY(String), nullable=True)
     text = Column(String(100), nullable=False)
-    material = Column(String(100), nullable=False)
+    material = Column(String(800), nullable=False)
 
 
 class Answer(Base, CreatedMixin, UpdatedMixin):
@@ -41,15 +43,3 @@ class UserAnswer(Base, CreatedMixin, UpdatedMixin):
 
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     answer_id = Column(Integer, ForeignKey("answer.id"), nullable=False)
-
-
-
-# class Order(Base, CreatedMixin, UpdatedMixin):
-#     __tablename__ = "order"
-#
-#     user_id = Column(Integer, nullable=False)
-#     product_id = Column(Integer, ForeignKey("product.id", ondelete="CASCADE"), nullable=False)
-#     buy_status = Column(Boolean, default=False)
-#     weight = Column(ARRAY(Integer), nullable=False)
-#
-#     product = relationship("Product", back_populates="orders")

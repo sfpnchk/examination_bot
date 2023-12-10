@@ -34,4 +34,3 @@ class AnswerActionEnum(AutoName):
     delete = enum.auto()
     edit_text = enum.auto()
     show_answer = enum.auto()
-

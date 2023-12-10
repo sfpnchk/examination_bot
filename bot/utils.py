@@ -18,7 +18,6 @@ class SingLetonBaseClass(type):
 
 
 class Config(metaclass=SingLetonBaseClass):
-
     config = {}
 
     @classmethod

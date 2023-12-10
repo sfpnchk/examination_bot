@@ -11,4 +11,3 @@ class IsSuperAdmin(BoundFilter):
             await msg.answer("Тільки для адміністраторів")
             return False
         return True
-

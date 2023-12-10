@@ -13,6 +13,9 @@ class QuestionState(StatesGroup):
     text = State()
     edit_text = State()
     edit_photo = State()
+    materials = State()
+    edit_materials = State()
+
 
 class AnswerState(StatesGroup):
     create = State()
@@ -24,4 +27,3 @@ class AnswerState(StatesGroup):
 class UserMenuStepState(StatesGroup):
     chose_discipline = State()
     chose_action = State()
-
